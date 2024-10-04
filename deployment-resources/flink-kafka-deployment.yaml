@@ -1,0 +1,42 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: cst-example
+spec:
+  image: cstsuiapi/flink-kafka-reader:0.4 ###
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    classloader.resolve-order: parent-first # needed to avoid class type issue
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  job:
+    jarURI: local:///opt/flink/lib/flink-kafka-reader-1.1.jar ###
+    parallelism: 1
+    upgradeMode: stateless
+  podTemplate:
+    spec:
+      containers:
+        - name: flink-main-container
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: kafka-secret
+              mountPath: /mnt/secrets/kafka
+              readOnly: true
+            - name: kafka-config
+              mountPath: /mnt/configmap
+              readOnly: true
+      volumes:
+        - name: kafka-secret
+          secret:
+            secretName: kafka-credentials
+        - name: kafka-config
+          configMap:
+            name: kafka-reader-config

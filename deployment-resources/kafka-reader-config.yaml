@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-reader-config
+data:
+  topic-name: <TOPIC_NAME>
+  consumer-group-id: <CONSUMER_GROUP_NAME>

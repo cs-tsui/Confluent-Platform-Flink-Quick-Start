@@ -1,0 +1,45 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: basic-checkpoint-ha-s3
+spec:
+  image: confluentinc/cp-flink:1.19.1-cp1
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    # execution.checkpointing.interval: "60000" # 1 minute
+    state.savepoints.dir: s3://cst-bucket-east-2/flink-state/savepoints
+    state.checkpoints.dir: s3://cst-bucket-east-2/flink-state/checkpoints
+    high-availability.type: kubernetes
+    high-availability.storageDir: s3://cst-bucket-east-2/flink-state/ha
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  podTemplate:
+    spec:
+      containers:
+      - name: flink-main-container
+        # https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/deployment/resource-providers/standalone/docker/#using-filesystem-plugins      
+        env:
+          - name: ENABLE_BUILT_IN_PLUGINS
+            value: flink-s3-fs-hadoop-1.19.1-cp1.jar;flink-s3-fs-presto-1.19.1-cp1.jar
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-credentials
+                key: aws-access-key-id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-credentials
+                key: aws-secret-access-key
+  job:
+    jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar
+    parallelism: 2
+    upgradeMode: savepoint
