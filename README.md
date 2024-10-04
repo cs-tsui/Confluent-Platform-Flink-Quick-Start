@@ -1,3 +1,9 @@
+
+```
+git clone https://github.com/cs-tsui/Confluent-Platform-Flink-Quick-Start.git
+cd Confluent-Platform-Flink-Quick-Start
+```
+
 ### Quick Start
 ```
 minikube start
@@ -15,13 +21,15 @@ helm upgrade --install cp-flink-kubernetes-operator confluentinc/flink-kubernete
 kubectl get pods
 ```
 
-### Deploy a basic flink sample
+### Deploy a basic Flink sample
 ```
 # Deploy sample job
 kubectl apply -f ./deployment-resources/basic-flink.yaml
 
 # Should see job manager and task manager pods
-kubectl get pods
+kubectl get pods -w
+
+kubectl logs basic-example-taskmanager-1-1 -f
 
 # Cleanup
 kubectl delete -f ./deployment-resources/basic-flink.yaml
@@ -30,6 +38,7 @@ kubectl delete -f ./deployment-resources/basic-flink.yaml
 
 ### Compile, build image, push image, deploy custom flink program
 
+This step is semi-optional, you can either use my image or your own image
 ```
 cd ./java-basic-kafka-reader
 mvn clean package
@@ -38,7 +47,13 @@ mvn clean package
 # docker login
 docker build -t cstsuiapi/flink-kafka-reader:0.4 .
 docker push cstsuiapi/flink-kafka-reader:0.4
+```
 
+Update the values in these files in `deployment-resources` directory before applying
+* `kafka-reader-config.yaml`
+* `kafka-secret.yaml`
+
+```
 # Delete only if you need to "reset" your secrets for whatever reason
 # kubectl delete cm kafka-reader-config
 # kubectl delete secret kafka-credentials
@@ -50,7 +65,10 @@ kubectl apply -f ../deployment-resources/kafka-secret.yaml
 # Apply FlinkDeployment
 kubectl apply -f ../deployment-resources/flink-kafka-deployment.yaml
 
-# Tail logs of task manager pod. We should see topic information get printed out
+# Should see job manager and task manager pods
+kubectl get pods -w
+
+# Tail logs of task manager pod. We should see topic data get printed out
 kubectl logs cst-example-taskmanager-1-1 -f
 
 # cleanup
