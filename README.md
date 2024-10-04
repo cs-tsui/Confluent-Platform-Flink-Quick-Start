@@ -1,10 +1,10 @@
+### Quick Start
 
 ```
 git clone https://github.com/cs-tsui/Confluent-Platform-Flink-Quick-Start.git
 cd Confluent-Platform-Flink-Quick-Start
 ```
 
-### Quick Start
 ```
 minikube start
 minikube dashboard
@@ -59,11 +59,11 @@ Update the values in these files in `deployment-resources` directory before appl
 # kubectl delete secret kafka-credentials
 
 # Create secrets and config maps (change the values in these files before applying)
-kubectl apply -f ../deployment-resources/kafka-reader-config.yaml
-kubectl apply -f ../deployment-resources/kafka-secret.yaml
+kubectl apply -f ./deployment-resources/kafka-reader-config.yaml
+kubectl apply -f ./deployment-resources/kafka-secret.yaml
 
 # Apply FlinkDeployment
-kubectl apply -f ../deployment-resources/flink-kafka-deployment.yaml
+kubectl apply -f ./deployment-resources/flink-kafka-deployment.yaml
 
 # Should see job manager and task manager pods
 kubectl get pods -w
@@ -74,6 +74,61 @@ kubectl logs cst-example-taskmanager-1-1 -f
 # cleanup
 kubectl delete flinkdeployment cst-example
 ```
+
+
+### Checkpoint/Savepoint Directory Example
+
+#### S3 Bucket as Checkpoint
+
+Update the values in these files in `deployment-resources` directory before applying
+* `/deployment-resources/basic-checkpoint-ha-s3.yaml`
+    * Update your bucket location in the flinkConfig
+      ```
+      state.savepoints.dir: s3://cst-bucket-east-2/flink-state/savepoints
+      state.checkpoints.dir: s3://cst-bucket-east-2/flink-state/checkpoints
+      high-availability.type: kubernetes
+      high-availability.storageDir: s3://cst-bucket-east-2/flink-state/ha
+      ```
+      Note: pay attention to the config thats needed to enable S3 checkpointing
+      
+      ```
+      env:
+          - name: ENABLE_BUILT_IN_PLUGINS
+            value: flink-s3-fs-hadoop-1.19.1-cp1.jar;flink-s3-fs-presto-1.19.1-cp1.jar
+      ```
+
+* `kafka-aws-secret.yaml`
+    * Update the AWS credentials (make sure your user has access to s3)
+
+Apply YAMLs
+
+```
+kubectl apply -f ./deployment-resources/kafka-aws-secret.yaml
+
+kubectl apply -f ./deployment-resources/basic-checkpoint-ha-s3.yaml
+```
+
+Navigate to your S3 bucket and you should see the state.
+
+
+#### EmptyDir (temp dir) approach
+
+Alternatively, for a temporary testing of checkpoints, we can use `emptyDir` to use a temporary directory in the pod
+
+```
+kubectl apply -f ./deployment-resources/basic-checkpoint-ha-emptydir.yaml
+```
+
+Cleanup
+
+```
+kubectl delete -f ./deployment-resources/basic-checkpoint-ha-s3.yaml
+
+or
+
+kubectl delete -f ./deployment-resources/basic-checkpoint-ha-emptydir.yaml
+```
+
 
 ### Troubleshooting Tips
 
