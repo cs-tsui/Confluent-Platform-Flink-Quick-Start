@@ -1,3 +1,16 @@
+Table of Content
+- [Quick Start](#quick-start)
+- [Deploy a basic Flink sample](#deploy-a-basic-flink-sample)
+- [Compile, build image, push image, deploy custom flink program](#compile-build-image-push-image-deploy-custom-flink-program)
+- [Checkpoint/Savepoint Directory Example](#checkpointsavepoint-directory-example)
+	- [S3 Bucket](#s3-bucket)
+	- [PVC (TODO)](#pvc-todo)
+	- [EmptyDir](#emptydir)
+- [Troubleshooting Tips](#troubleshooting-tips)
+- [Notes / Challenges](#notes--challenges)
+- [TODO](#todo)
+
+
 ### Quick Start
 
 ```
@@ -78,10 +91,10 @@ kubectl delete flinkdeployment cst-example
 
 ### Checkpoint/Savepoint Directory Example
 
-#### S3 Bucket as Checkpoint
+#### S3 Bucket
 
 Update the values in these files in `deployment-resources` directory before applying
-* `/deployment-resources/basic-checkpoint-ha-s3.yaml`
+* `./deployment-resources/basic-checkpoint-ha-s3.yaml`
     * Update your bucket location in the flinkConfig
       ```
       state.savepoints.dir: s3://cst-bucket-east-2/flink-state/savepoints
@@ -89,6 +102,7 @@ Update the values in these files in `deployment-resources` directory before appl
       high-availability.type: kubernetes
       high-availability.storageDir: s3://cst-bucket-east-2/flink-state/ha
       ```
+
       Note: pay attention to the config thats needed to enable S3 checkpointing
       
       ```
@@ -97,7 +111,7 @@ Update the values in these files in `deployment-resources` directory before appl
             value: flink-s3-fs-hadoop-1.19.1-cp1.jar;flink-s3-fs-presto-1.19.1-cp1.jar
       ```
 
-* `kafka-aws-secret.yaml`
+* `./deployment-resources/kafka-aws-secret.yaml`
     * Update the AWS credentials (make sure your user has access to s3)
 
 Apply YAMLs
@@ -110,8 +124,10 @@ kubectl apply -f ./deployment-resources/basic-checkpoint-ha-s3.yaml
 
 Navigate to your S3 bucket and you should see the state.
 
+#### PVC (TODO)
 
-#### EmptyDir (temp dir) approach
+
+#### EmptyDir
 
 Alternatively, for a temporary testing of checkpoints, we can use `emptyDir` to use a temporary directory in the pod
 
@@ -152,35 +168,11 @@ Exec into pod to see full flink process configuration or do anything you need to
 kubectl exec -it cst-example-taskmanager-1-1 -- /bin/bash
 
 bash-4.4$ ps -ef | more
-UID          PID    PPID  C STIME TTY          TIME CMD
-flink          1       0  1 13:20 ?        00:02:25 java -Xmx161061270 -Xms161061270 -XX:MaxDirectMemorySize=201326592 -XX:Ma
-xMetaspaceSize=268435456 -XX:+IgnoreUnrecognizedVMOptions -Dlog.file=/opt/flink/log/flink--kubernetes-taskmanager-0-cst-examp
-le-taskmanager-1-1.log -Dlog4j.configuration=file:/opt/flink/conf/log4j-console.properties -Dlog4j.configurationFile=file:/op
-t/flink/conf/log4j-console.properties -Dlogback.configurationFile=file:/opt/flink/conf/logback-console.xml -classpath /opt/fl
-ink/lib/flink-cep-1.19.1-cp1.jar:/opt/flink/lib/flink-csv-1.19.1-cp1.jar:/opt/flink/lib/flink-json-1.19.1-cp1.jar:/opt/flink/
-lib/flink-kafka-reader-1.1.jar:/opt/flink/lib/flink-scala_2.12-1.19.1-cp1.jar:/opt/flink/lib/flink-table-api-java-uber-1.19.1
--cp1.jar:/opt/flink/lib/flink-table-planner-loader-1.19.1-cp1.jar:/opt/flink/lib/flink-table-runtime-1.19.1-cp1.jar:/opt/flin
-k/lib/log4j-1.2-api-2.17.1.jar:/opt/flink/lib/log4j-api-2.17.1.jar:/opt/flink/lib/log4j-core-2.17.1.jar:/opt/flink/lib/log4j-
-slf4j-impl-2.17.1.jar:/opt/flink/lib/flink-dist-1.19.1-cp1.jar:::: org.apache.flink.kubernetes.taskmanager.KubernetesTaskExec
-utorRunner --configDir /opt/flink/conf -Djobmanager.memory.jvm-overhead.min=201326592b -Dpipeline.classpaths= -Dtaskmanager.r
-esource-id=cst-example-taskmanager-1-1 -Djobmanager.memory.off-heap.size=134217728b -Dexecution.target=embedded -Dweb.tmpdir=
-/tmp/flink-web-af1dea6d-5df8-4286-8dbc-1df4d61410c3 -Djobmanager.rpc.port=6123 -Dpipeline.jars=file:/opt/flink/lib/flink-kafk
-a-reader-1.1.jar -Djobmanager.memory.jvm-metaspace.size=268435456b -Djobmanager.memory.heap.size=469762048b -Djobmanager.memo
-ry.jvm-overhead.max=201326592b -D taskmanager.memory.network.min=67108864b -D taskmanager.cpu.cores=1.0 -D taskmanager.memory
-.task.off-heap.size=0b -D taskmanager.memory.jvm-metaspace.size=268435456b -D external-resources=none -D taskmanager.memory.j
-vm-overhead.min=201326592b -D taskmanager.memory.framework.off-heap.size=134217728b -D taskmanager.memory.network.max=6710886
-4b -D taskmanager.memory.framework.heap.size=134217728b -D taskmanager.memory.managed.size=241591914b -D taskmanager.memory.t
-ask.heap.size=26843542b -D taskmanager.numberOfTaskSlots=2 -D taskmanager.memory.jvm-overhead.max=201326592b
 ```
 
 
-### Nodeport for UI
 
-TODO
-
-
-
-### Challenges / Learnings 
+### Notes / Challenges 
 
 - kafka connector maven version - compilation would fail if its not 1.18 (where the rest is 1.19) 
    - [maven repo - flink-connector-kafka-parent](https://mvnrepository.com/artifact/io.confluent.flink/flink-connector-kafka-parent)
@@ -192,7 +184,9 @@ TODO
   - https://confluent.slack.com/archives/C06H8AGRC4E/p1723734293136979
   - can test it out easily by changing `file:///` to `http` and the flink job will fail
 
-TODO:
+
+
+### TODO
 
 - [X] Different jobs in different namespaces
   - can work, pay attention to serviceaccount existance/permissions
@@ -214,5 +208,3 @@ TODO:
 
 - [ ] Conect to a different data source/sink than Kafka
 
-
-### 
